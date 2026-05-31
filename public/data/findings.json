@@ -1,0 +1,68 @@
+[
+  {
+    "id": "B-01",
+    "severity": "critical",
+    "type": "orphaned_contract",
+    "title": "Invoice never created",
+    "account": "Crestline Digital",
+    "affected_ids": ["C-1042", "Q-771", "OPP-7701"],
+    "system_owner": "Workato recipe cpq-to-stripe-prod",
+    "description": "Contract C-1042 ($48,000 ARR) executed 2026-03-14. Workato recipe cpq-to-stripe-prod was paused during a Stripe API key rotation on 2026-03-12 and never resumed. Invoice never created. The customer has been using the product for 77 days without being billed.",
+    "fix": "1. Go to Workato → Recipes → cpq-to-stripe-prod\n2. Resume the recipe\n3. Manually trigger the \"Contract Executed\" event for C-1042\n4. Confirm invoice INV-xxxx appears in Stripe within 5 minutes\n5. Add a recipe health-check alert: notify #rev-ops-alerts if recipe is paused for > 24 hours"
+  },
+  {
+    "id": "B-02",
+    "severity": "critical",
+    "type": "amount_mismatch",
+    "title": "Invoice billed at wrong amount",
+    "account": "Orion Payments, Inc.",
+    "affected_ids": ["INV-2201", "Q-889", "C-1031"],
+    "system_owner": "Zapier Zap: CPQ Quote Accepted → Stripe Invoice",
+    "description": "Quote Q-889 was approved at $26,400. Invoice INV-2201 was created at $24,000 — a $2,400 (9.1%) delta. Root cause: the discount approval workflow in Salesforce CPQ ran after the Stripe invoice trigger had already fired, updating the quote amount retroactively without re-triggering billing.",
+    "fix": "1. Add a 10-minute delay after \"Quote Accepted\" before triggering the Stripe invoice — allows discount approvals to resolve first\n2. For INV-2201: issue a corrective invoice for $2,400 to Orion Payments, Inc. and confirm payment\n3. Audit the last 90 days of invoices for amount deltas > 2% against their upstream quote (this rule catches the population)"
+  },
+  {
+    "id": "B-03",
+    "severity": "warning",
+    "type": "term_gap",
+    "title": "Renewal date gap — 14-day subscription lapse",
+    "account": "Halfmoon Labs",
+    "affected_ids": ["REN-441", "C-1019"],
+    "system_owner": "Salesforce Renewal Object / Billing schedule",
+    "description": "Contract C-1019 term ends 2026-07-01. Renewal REN-441 is dated 2026-07-15 — a 14-day gap. The billing schedule was set up from the renewal date, not the contract end date. The customer has a 2-week window where their subscription is technically expired but their access is still live.",
+    "fix": "1. Update REN-441 renewal_date from 2026-07-15 to 2026-07-01 in Salesforce\n2. Recalculate the billing schedule from the corrected renewal date\n3. Add a validation rule: renewal_date must equal or precede contract term_end\n4. Audit all open renewals for similar date gaps"
+  },
+  {
+    "id": "B-04",
+    "severity": "warning",
+    "type": "orphaned_quote",
+    "title": "Duplicate approved quotes — no contract for either",
+    "account": "Vantage GTM",
+    "affected_ids": ["Q-912", "Q-913", "OPP-7731"],
+    "system_owner": "Salesforce CPQ / Ironclad CLM",
+    "description": "Quote Q-912 ($18,500 ARR, Approved) has no downstream contract. Opportunity OPP-7731 was marked Closed Won 47 days ago. Sales rep created a second quote Q-913 to fix a discount and forgot to close the first. Both are 'Approved' in CPQ. CLM has no contract for either.",
+    "fix": "1. Identify the correct quote (Q-912 or Q-913) with the sales rep\n2. Void the incorrect quote in CPQ\n3. Send the correct quote to Ironclad to initiate contract execution\n4. Add a CPQ validation: only one quote per opportunity can be in Approved status"
+  },
+  {
+    "id": "B-05",
+    "severity": "warning",
+    "type": "currency_mismatch",
+    "title": "Currency mismatch — CAD invoice on USD quote",
+    "account": "Parabola Works",
+    "affected_ids": ["INV-2189", "Q-844", "C-1050"],
+    "system_owner": "Billing system (Stripe entity config)",
+    "description": "Quote Q-844 denominated in USD ($31,200). Invoice INV-2189 denominated in CAD — no FX conversion recorded. The Canadian entity was set up mid-deal after the quote was approved. Billing picked up the entity's default currency without reconciling against the quote.",
+    "fix": "1. Issue a corrective invoice in USD for $31,200 to Parabola Works\n2. Void INV-2189 (CAD)\n3. Update the Stripe customer entity to enforce USD billing for this account\n4. Add a pre-invoice check: invoice currency must match quote currency"
+  },
+  {
+    "id": "B-06",
+    "severity": "at-risk",
+    "type": "missing_renewal_owner",
+    "title": "Renewal owner null — $96k at risk in 15 days",
+    "account": "Sable Collective",
+    "affected_ids": ["REN-457", "C-1058"],
+    "system_owner": "Salesforce Renewal Object / CSM assignment",
+    "description": "Renewal REN-457 expires 2026-06-14 (15 days). owner_id is null. Original CSM departed 2026-04-01; territory was redistributed but the renewal record was never reassigned. No one has called the account.",
+    "fix": "1. Assign REN-457 to the new territory owner immediately in Salesforce\n2. Schedule a call with Sable Collective this week — 15 days is tight\n3. Add a SFDC workflow rule: if renewal owner_id is null and days_until_renewal < 30, alert #csm-ops\n4. Audit all renewals for null owner within the next 60 days"
+  }
+]

@@ -1,0 +1,19 @@
+{
+   "name": "q2see-demo",
+   "type": "module",
+   "version": "1.0.0",
+   "private": false,
+   "description": "Q2See — Quote-to-Cash flow inspector. Public portfolio demo.",
+   "scripts": {
+      "dev": "astro dev",
+      "build": "astro build",
+      "preview": "astro preview"
+   },
+   "dependencies": {
+      "astro": "^5.0.0"
+   },
+   "devDependencies": {
+      "typescript": "^5.6.0"
+   },
+   "packageManager": "pnpm@10.33.2"
+}
