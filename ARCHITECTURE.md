@@ -5,7 +5,35 @@
 - **Astro 5** — static site generator
 - **TypeScript** — vanilla TS, no framework
 - **SVG** — all graphics are inline SVG, no Canvas, no D3, no external charting library
-- **No backend, no API keys, no environment variables**
+- **Cloudflare Pages Function** — one serverless endpoint for real CRM/billing-export analysis
+- **No API keys, no environment variables, no stored state** — uploads are processed in-request and discarded
+
+## Live backend
+
+`functions/q2see/analyze.js` handles `POST /q2see/analyze` and runs the Quote-to-Cash analysis server-side on data you upload:
+
+1. **Auto-detect input shape** — a flattened CSV export (one row per opportunity, lifecycle columns inline), an array of row objects, or a canonical `{opportunities, quotes, contracts, invoices, renewals}` dataset. Malformed input is rejected with a specific error.
+2. **Map rows to the five Q2C object types** with synonym-tolerant column matching (`rowsToDataset`), so a Salesforce/HubSpot/raw export maps without hand-editing headers.
+3. **Run the six detection rules** (`detectFindings`, below) over the parsed rows, deriving a reference "today" from the latest date in the data so overdue / days-until math is deterministic.
+4. **Build the flow graph edges** (`buildEdges`), coloring each by the severity of any finding on its downstream object, including a "ghost" edge from each orphaned contract to its missing invoice.
+5. **Return** the dataset, edges, findings, and stats with `source: "uploaded"` and the detected `inputFormat`.
+
+The pipeline is stateless and identical whether the input is the synthetic sample or a real uploaded export — the sample is just the zero-friction path. Pure helpers (`parseCsv`, `rowsToDataset`, `detectFindings`, `buildEdges`, `analyze`) are exported and unit-tested in `tests/q2see-analyze.test.js`.
+
+## The detection rules
+
+`detectFindings()` runs six broken-handoff rules over the canonical dataset:
+
+| Rule | Severity | Fires when |
+|---|---|---|
+| `orphaned_contract` | critical | Contract is executed but no invoice exists for it (revenue leak) |
+| `amount_mismatch` | critical | Invoice total diverges from quote total (incl. tax) beyond a 2% tolerance |
+| `currency_mismatch` | warning | Invoice currency differs from the approved quote currency |
+| `orphaned_quote` | warning | Quote is approved/accepted but never produced a contract |
+| `missing_renewal_owner` | at-risk | Renewal has no owner, or its status is flagged at-risk/churn |
+| `term_gap` | warning | Invoice is past due and unpaid (cash not collected) |
+
+Each finding carries `account`, `affected_ids`, a human-readable `description`, the `system_owner` that should fix it, and a concrete `fix` — so the graph node, the inspector, and the findings rail all render the same record-level evidence.
 
 ## Why SVG instead of Canvas or D3
 
@@ -61,21 +89,29 @@ Severity filters (healthy, warning, broken, at-risk) let the user focus on the p
 
 | File | Responsibility |
 |---|---|
-| `src/pages/index.astro` | Shell: nav, banner, filter bar, graph canvas, inspector, findings rail |
-| `src/components/app.ts` | Bootstrap, data loading, layout computation, SVG rendering, pan/zoom, inspector |
-| `src/styles/q2see.css` | All styles: shell, graph, nodes, edges, inspector, responsive breakpoints |
+| `functions/q2see/analyze.js` | Live Pages Function: CSV/JSON parsing, row mapping, six detection rules, edge building |
+| `tests/q2see-analyze.test.js` | Unit tests for the parser + rules engine, anchored to a fixed "today" |
+| `src/pages/index.astro` | Shell: nav, import panel, banner, filter bar, graph canvas, inspector, findings rail |
+| `src/components/app.ts` | Bootstrap, synthetic data loading, import → `POST /q2see/analyze`, layout, SVG rendering, pan/zoom, inspector |
+| `src/styles/q2see.css` | All styles: shell, import panel, graph, nodes, edges, inspector, responsive breakpoints |
+| `public/q2see/data/*.json` | Synthetic sample dataset (the no-upload path) |
+| `public/q2see/sample-q2c-export.csv` | Sample CRM export the "Load sample export" button posts to the backend |
 
-## What was cut for scope
+## What is live vs. cut for scope
 
-- **Force-directed or Sugiyama layout** — fixed column layout only
-- **Real-time updates** — static snapshot only
-- **Multi-entity graphs** — single Q2C pipeline only
-- **Export / print** — no PDF or image export
+**Live:** CSV/JSON parsing and all six detection rules run server-side on real uploaded Quote-to-Cash exports (see [Live backend](#live-backend)).
+
+Cut for scope:
+- **Live CRM/billing OAuth** — analysis runs on an uploaded export (a point-in-time snapshot), not a live Salesforce / HubSpot / Stripe connection
+- **Automated remediation** — Q2See surfaces the break and the suggested fix; a human acts on it
+- **Force-directed or Sugiyama layout** — fixed business-process column layout only
+- **Time-series playback** — single point-in-time snapshot, not historical trends
+- **Persistent storage** — each request is independent; nothing is stored
 
 ## How to extend to production
 
-A production version would need:
-1. CRM connectors (Salesforce, HubSpot, NetSuite) for live data
+The upload path already proves parsing + detection on real data. A production version would add:
+1. CRM/billing connectors (Salesforce, HubSpot, NetSuite, Stripe) for live, continuous ingestion
 2. A layout engine that handles >100 nodes without overlap
 3. Time-series playback ("watch this deal move through the pipeline over 90 days")
 4. Alerting on broken handoffs ("Contract X signed 30 days ago, no invoice created")

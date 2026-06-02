@@ -1,0 +1,9 @@
+opportunity_id,account,stage,arr,quote_id,quote_status,quote_amount,quote_currency,quote_approved_at,contract_id,contract_status,contract_executed_at,term_start,term_end,invoice_id,invoice_status,invoice_amount,invoice_currency,invoice_issued_at,invoice_due_at,invoice_paid_at,renewal_id,renewal_date,renewal_owner,renewal_status,renewal_arr
+OPP-7701,Crestline Digital Inc.,Closed Won,48000,Q-771,Accepted,48000,USD,2026-03-12,C-1042,Executed,2026-03-14,2026-03-14,2027-03-14,,,,,,,,,,,,
+OPP-7702,"Orion Payments, Inc.",Closed Won,26400,Q-889,Accepted,26400,USD,2026-03-22,C-1031,Executed,2026-03-25,2026-04-01,2027-04-01,INV-2201,Paid,24000,USD,2026-03-26,2026-04-25,2026-04-02,,,,,
+OPP-7703,Halfmoon Labs,Closed Won,31200,Q-844,Accepted,31200,USD,2026-01-20,C-1050,Executed,2026-01-22,2026-01-23,2027-01-23,INV-2189,Paid,31200,CAD,2026-01-23,2026-02-22,2026-02-18,,,,,
+OPP-7704,Brightwave Media,Negotiation,18000,Q-902,Accepted,18000,USD,2026-05-15,,,,,,,,,,,,,,,,,
+OPP-7705,Northwind Traders,Closed Won,96000,Q-810,Accepted,96000,USD,2026-01-05,C-1058,Executed,2026-01-10,2026-01-12,2026-06-12,INV-2150,Paid,96000,USD,2026-01-12,2026-02-11,2026-02-05,REN-457,2026-06-20,,At Risk,96000
+OPP-7706,Pinnacle Foods,Closed Won,36000,Q-915,Accepted,36000,USD,2026-03-01,C-1061,Executed,2026-03-05,2026-03-10,2027-03-10,INV-2210,Sent,36000,USD,2026-03-20,2026-04-20,,,,,,
+OPP-7707,Summit Tools,Closed Won,22000,Q-920,Accepted,22000,USD,2026-04-10,C-1065,Executed,2026-04-12,2026-04-15,2027-04-15,INV-2230,Paid,22000,USD,2026-04-15,2026-05-15,2026-05-10,REN-470,2027-04-15,USR-003,Scheduled,22000
+OPP-7708,Vertex Cloud,Closed Won,54000,Q-931,Accepted,54000,USD,2026-05-01,C-1070,Executed,2026-05-03,2026-05-05,2027-05-05,INV-2240,Paid,54000,USD,2026-05-05,2026-06-04,2026-05-30,REN-480,2027-05-05,USR-001,Scheduled,54000

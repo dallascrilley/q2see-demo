@@ -1,6 +1,7 @@
 ---
 // Q2See — Quote-to-Cash Flow Inspector
-// Static page; all data loaded client-side from /q2see/data/
+// Static page; synthetic data loaded client-side from /q2see/data/.
+// Real backend: import-capable, posts to /q2see/analyze (Cloudflare Pages Function).
 import '../styles/q2see.css';
 const title = "Q2See — Signed contract. No invoice. Nobody's panicking yet. They will be.";
 const description = "One flow graph. Every broken handoff. Before legal finds it first. Q2See inspects your Quote-to-Cash pipeline at the record level — contract, quote, invoice, renewal — and surfaces exactly where the plumbing broke.";
@@ -16,7 +17,7 @@ const description = "One flow graph. Every broken handoff. Before legal finds it
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="robots" content="noindex" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
@@ -29,8 +30,33 @@ const description = "One flow graph. Every broken handoff. Before legal finds it
         <span class="q2-nav-sep" aria-hidden="true"></span>
         <span class="q2-nav-label">Quote-to-Cash Flow Inspector</span>
         <span class="q2-nav-spacer"></span>
+        <button class="q2-nav-import" id="q2-import-toggle" aria-expanded="false" aria-controls="q2-import-panel">Import your data</button>
         <span class="q2-nav-badge">synthetic · demo</span>
       </nav>
+
+      <!-- Import panel — real backend (POST /q2see/analyze) -->
+      <div class="q2-import-panel hidden" id="q2-import-panel" role="region" aria-label="Import a Quote-to-Cash export">
+        <div class="q2-import-head">
+          <strong>Inspect your own pipeline.</strong>
+          Upload a CSV export of your deals (one row per opportunity, lifecycle columns inline) and the server parses
+          contract → quote → invoice → renewal and flags every broken handoff in <em>your</em> rows.
+          Analysis runs server-side on the export you provide — no live CRM connection, no data stored.
+        </div>
+        <div class="q2-import-controls">
+          <label class="q2-import-filebtn">
+            Choose CSV / JSON
+            <input type="file" id="q2-import-file" accept=".csv,.json,text/csv,application/json" hidden />
+          </label>
+          <button class="q2-import-btn" id="q2-import-sample" type="button">Load sample export</button>
+          <a class="q2-import-link" href="/q2see/sample-q2c-export.csv" download>Download sample CSV</a>
+        </div>
+        <textarea id="q2-import-text" class="q2-import-text" rows="5" spellcheck="false"
+          placeholder="…or paste CSV / JSON here. Header row + one row per opportunity. Synonym-tolerant columns: opportunity_id, account, arr, quote_id, quote_status, quote_amount, quote_currency, contract_id, contract_status, contract_executed_at, term_start, term_end, invoice_id, invoice_status, invoice_amount, invoice_currency, invoice_due_at, invoice_paid_at, renewal_id, renewal_date, renewal_owner, renewal_status"></textarea>
+        <div class="q2-import-actions">
+          <button class="q2-import-btn q2-import-btn--primary" id="q2-import-analyze" type="button">Analyze export</button>
+          <span class="q2-import-status" id="q2-import-status" role="status"></span>
+        </div>
+      </div>
 
       <!-- Synthetic data banner -->
       <div class="q2-banner" id="q2-banner" role="status">

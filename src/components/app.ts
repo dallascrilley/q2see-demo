@@ -42,6 +42,10 @@ interface Finding {
   type: string; title: string; account: string;
   description: string; system_owner: string; fix: string;
   affected_ids: string[];
+  // Present on orphaned_contract findings: a missing downstream object to render
+  // as a ghost node (synthetic data hardcodes this client-side; the import
+  // backend emits it directly).
+  ghost?: { type: string; for_contract: string; account: string; arr_usd: number };
 }
 
 interface DataSet {
@@ -101,7 +105,7 @@ let panStart = { x: 0, y: 0 };
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
 async function loadData(): Promise<DataSet> {
-  const base = '/data';
+  const base = '/q2see/data';
   const [opportunities, quotes, contracts, invoices, renewals, edges, findings] =
     await Promise.all([
       fetch(`${base}/opportunities.json`).then(r => r.json()),
@@ -254,12 +258,20 @@ function computeLayout(dataset: DataSet): LayoutNode[] {
       invoiceHealthyCount++;
     }
   }
-  // Ghost node for B-01: contract C-1042 has no invoice — always rendered
-  {
+  // Ghost invoice node for every "contract executed, no invoice" finding.
+  // Synthetic findings name the contract via affected_ids; the import backend
+  // emits an explicit `ghost` marker. Either way we render an empty invoice slot.
+  for (const f of dataset.findings) {
+    if (f.type !== 'orphaned_contract') continue;
+    const contractId = f.ghost?.for_contract ?? f.affected_ids.find(id => dataset.contracts.some(c => c.id === id));
+    if (!contractId) continue;
+    const contract = dataset.contracts.find(c => c.id === contractId);
+    const account = f.ghost?.account ?? f.account ?? (contract ? contract.entity : '');
+    const arr = f.ghost?.arr_usd ?? contract?.arr_usd ?? 0;
     const cx = COL_X['invoice'];
     const cy = colY['invoice'];
     colY['invoice'] += NODE_H + NODE_GAP;
-    result.push({ id: 'MISSING-INV-C-1042', type: 'invoice', label: 'INV-????', account: 'Crestline Digital', arr_usd: 48000, status: 'MISSING', findingId: 'B-01', severity: 'broken', cx, cy: cy + NODE_H / 2, w: NODE_W, h: NODE_H });
+    result.push({ id: `MISSING-INV-${contractId}`, type: 'invoice', label: 'INV-????', account, arr_usd: arr, status: 'MISSING', findingId: f.id, severity: 'broken', cx, cy: cy + NODE_H / 2, w: NODE_W, h: NODE_H });
   }
   addAggregateNode('invoice', invoiceHealthyCount);
 
@@ -990,45 +1002,144 @@ function initInspectorClose() {
   });
 }
 
-// ─── Initial focus on B-01 ────────────────────────────────────────────────────
-
-function focusB01() {
-  const b01node = nodes.find(n => n.id === 'C-1042');
-  if (!b01node || !ds) return;
-
-  // Set a reasonable initial scale
-  vpScale = 0.75;
-
-  // Center on the contract column area, slightly left
-  const svg = document.getElementById('q2-svg');
-  if (svg) {
-    const rect = svg.getBoundingClientRect();
-    vpX = rect.width * 0.5 - b01node.cx * vpScale;
-    vpY = rect.height * 0.5 - b01node.cy * vpScale;
-  }
-
-  selectNode('C-1042');
-}
 
 // ─── Main init ────────────────────────────────────────────────────────────────
 
+// Recompute layout + redraw for the current `ds`, then focus the most severe node.
+// Used both on first load (synthetic) and after a successful import.
+function renderDataset(focusId?: string) {
+  if (!ds) return;
+  activeNodeId = null;
+  nodes = computeLayout(ds);
+  renderGraph();
+  renderFindingsRail();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const target = focusId && nodes.some(n => n.id === focusId) ? focusId : firstSevereNodeId();
+      if (target) focusNode(target);
+    });
+  });
+}
+
+// Pick the highest-severity rendered node to open the inspector on by default.
+function firstSevereNodeId(): string | null {
+  const rank = (s: string) => s === 'broken' ? 0 : s === 'at-risk' ? 1 : s === 'warning' ? 2 : 3;
+  const candidates = nodes.filter(n => n.severity !== 'healthy' && !n.isAggregate)
+    .sort((a, b) => rank(a.severity) - rank(b.severity) || b.arr_usd - a.arr_usd);
+  return candidates[0]?.id ?? nodes.find(n => !n.isAggregate)?.id ?? null;
+}
+
+// Center + select a node (generalized from the old synthetic-only focusB01).
+function focusNode(id: string) {
+  const node = nodes.find(n => n.id === id);
+  if (!node || !ds) return;
+  vpScale = 0.75;
+  const svg = document.getElementById('q2-svg');
+  if (svg) {
+    const rect = svg.getBoundingClientRect();
+    vpX = rect.width * 0.5 - node.cx * vpScale;
+    vpY = rect.height * 0.5 - node.cy * vpScale;
+  }
+  selectNode(id);
+}
+
+// ─── Import (real backend) ──────────────────────────────────────────────────────
+
+function setMode(label: string, isUploaded: boolean) {
+  const badge = document.querySelector('.q2-nav-badge');
+  if (badge) {
+    badge.textContent = label;
+    badge.classList.toggle('q2-nav-badge--live', isUploaded);
+  }
+}
+
+async function runImport(raw: string, name: string) {
+  const status = document.getElementById('q2-import-status');
+  if (status) { status.textContent = 'Analyzing…'; status.className = 'q2-import-status'; }
+  try {
+    const res = await fetch('/q2see/analyze', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ raw, name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || `Server returned ${res.status}`);
+    ds = {
+      opportunities: data.opportunities, quotes: data.quotes, contracts: data.contracts,
+      invoices: data.invoices, renewals: data.renewals, edges: data.edges, findings: data.findings,
+    };
+    renderDataset();
+    setMode(`your data · ${data.stats.findings} findings`, true);
+    if (status) {
+      status.className = 'q2-import-status q2-import-status--ok';
+      status.textContent = `Analyzed ${name}: ${data.stats.findings} findings across ${data.stats.opportunities} deals (${data.stats.critical} critical).`;
+    }
+    // Rewrite the synthetic-data banner to reflect the honest uploaded-data boundary.
+    const banner = document.getElementById('q2-banner');
+    if (banner) {
+      banner.classList.add('q2-banner--live');
+      const icon = banner.querySelector('.q2-banner-icon');
+      const text = banner.querySelector('.q2-banner-text');
+      if (icon) icon.textContent = 'LIVE';
+      if (text) text.innerHTML = `<strong>Your data — ${data.stats.opportunities} deals analyzed server-side.</strong> ` +
+        `These findings were computed from the export you uploaded (${name}), not synthetic data. ` +
+        `Nothing is stored, and this is a point-in-time export — not a live CRM connection.`;
+    }
+    document.getElementById('q2-import-panel')?.classList.add('hidden');
+  } catch (err) {
+    console.error('[Q2See] Import failed:', err);
+    if (status) {
+      status.className = 'q2-import-status q2-import-status--err';
+      status.textContent = err instanceof Error ? err.message : 'Import failed.';
+    }
+  }
+}
+
+function initImport() {
+  const toggle = document.getElementById('q2-import-toggle');
+  const panel = document.getElementById('q2-import-panel');
+  const fileInput = document.getElementById('q2-import-file') as HTMLInputElement | null;
+  const textarea = document.getElementById('q2-import-text') as HTMLTextAreaElement | null;
+  const analyzeBtn = document.getElementById('q2-import-analyze');
+  const sampleBtn = document.getElementById('q2-import-sample');
+
+  toggle?.addEventListener('click', () => panel?.classList.toggle('hidden'));
+
+  fileInput?.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { if (textarea) textarea.value = String(reader.result || ''); runImport(textarea?.value || '', file.name); };
+    reader.readAsText(file);
+  });
+
+  analyzeBtn?.addEventListener('click', () => {
+    const raw = textarea?.value?.trim();
+    if (!raw) { const s = document.getElementById('q2-import-status'); if (s) { s.className = 'q2-import-status q2-import-status--err'; s.textContent = 'Paste CSV/JSON or choose a file first.'; } return; }
+    runImport(raw, 'pasted-export.csv');
+  });
+
+  sampleBtn?.addEventListener('click', async () => {
+    try {
+      const text = await fetch('/q2see/sample-q2c-export.csv').then(r => r.text());
+      if (textarea) textarea.value = text;
+      runImport(text, 'sample-q2c-export.csv');
+    } catch {
+      const s = document.getElementById('q2-import-status'); if (s) { s.className = 'q2-import-status q2-import-status--err'; s.textContent = 'Could not load sample.'; }
+    }
+  });
+}
+
 async function init() {
   try {
-    ds = await loadData();
-    nodes = computeLayout(ds);
-    renderGraph();
-    renderFindingsRail();
     initFilterBar();
     initPanZoom();
     initBanner();
     initInspectorClose();
+    initImport();
 
-    // Auto-focus on B-01 after a brief paint settle
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        focusB01();
-      });
-    });
+    ds = await loadData();
+    renderDataset('C-1042'); // synthetic default focus
   } catch (err) {
     console.error('[Q2See] Failed to load data:', err);
     const wrap = document.getElementById('q2-graph-wrap');

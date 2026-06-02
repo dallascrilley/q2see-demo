@@ -1,0 +1,8 @@
+# Cloudflare Pages config. The static Astro site builds to ./dist; functions in
+# ./functions are deployed as Pages Functions (POST /q2see/analyze).
+#
+#   pnpm build && npx wrangler pages dev dist   # serve site + functions locally
+#
+name = "q2see-demo"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
