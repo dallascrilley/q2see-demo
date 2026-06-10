@@ -450,7 +450,7 @@ export const amountMismatchRule: Rule = (ds) =>
     .map(inv => ({ finding: buildFinding("B-02", inv) }));
 ```
 
-Rules are evaluated at build time and embedded in `findings.json`. The in-browser path re-evaluates rules from fixture data for filter-state consistency.
+The bundled sample includes precomputed JSON so the first screen appears immediately. Uploaded exports are analyzed by the Pages Function, and the returned dataset becomes the graph/finding source in the browser. The same pure helpers are covered by `tests/q2see-analyze.test.js`.
 
 ### File structure
 
