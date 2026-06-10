@@ -395,7 +395,10 @@ THE FIX
    against their upstream quote (this rule catches the population)
 ```
 
-Dataset stored as static JSON fixtures in `data/q2see/` — five object files plus pre-computed `findings.json` and `edges.json`. Hydrated into in-memory state on first load.
+Two data paths are supported:
+
+1. A synthetic sample dataset in `public/q2see/data/`, hydrated on first load so reviewers can inspect the flow immediately.
+2. A real import path through `POST /q2see/analyze`, where a Cloudflare Pages Function parses an uploaded CSV or JSON export server-side, maps each row into Q2C objects, runs the six detection rules, and returns a graph plus findings.
 
 ---
 
@@ -405,25 +408,26 @@ Dataset stored as static JSON fixtures in `data/q2see/` — five object files pl
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Framework | Astro (static output) | Matches demo-lab standard; zero server required |
-| Component layer | Preact (islands) | Lightweight; graph needs reactive state for inspector panel |
-| Graph rendering | `@xyflow/react` (React Flow) | Purpose-built DAG/flow renderer; handles pan/zoom/edges; well-maintained |
-| Styling | CSS custom properties + scoped CSS modules | No Tailwind noise; tokens match brand palette |
-| Data | Static JSON fixtures in `data/q2see/` | No backend, no keys, no CORS |
-| Deploy | Wrangler / Cloudflare Pages | Consistent with demo-lab deploy pattern |
-| TypeScript | Strict mode, 5.6 | Existing demo-lab standard |
+| Framework | Astro static page plus Cloudflare Pages Function | Static shell, real import backend |
+| Component layer | Vanilla TypeScript | Lightweight graph, import controls, inspector, and findings rail |
+| Graph rendering | Inline SVG | Deterministic flow graph without a heavy runtime |
+| Styling | CSS custom properties + scoped CSS | No Tailwind noise; tokens match brand palette |
+| Sample data | Static JSON fixtures in `public/q2see/data/` | Zero-friction review path |
+| Imported data | `functions/q2see/analyze.js` | Server-side parsing and detection over uploaded CSV/JSON |
+| Deploy | Wrangler / Cloudflare Pages | Static UI plus Pages Function at `/q2see/analyze` |
+| TypeScript | Strict mode | Existing demo standard |
 
 ### Graph rendering approach
 
-React Flow renders the five node types as custom node components. Layout is computed once at hydration time via dagre — no dynamic recalculation on interaction. Five columns (one per object type); within each column, nodes sorted by `arr_usd` descending.
+The shipped UI renders the five object types in an inline SVG graph. Layout is computed in the client component from either the bundled sample or the backend response. Five columns represent opportunity, quote, contract, invoice, and renewal; within each column, nodes are sorted by revenue and finding severity.
 
-On mount: the graph auto-centers on the most critical finding (B-01, Crestline Digital). The inspector pre-populates with B-01. This means the demo's most impressive moment is visible in under 1 second, before any interaction.
+On mount: the graph loads the sample dataset and preselects a critical finding. On import: the browser posts the uploaded export to `/q2see/analyze`, then swaps the graph, findings rail, and boundary banner to the user's uploaded data.
 
-Each node component receives its data object + finding (if any). Flagged nodes receive a severity CSS class injected at render time that drives border color, glow, and pulse animation. The inspector panel is a Preact component in a fixed right panel; it receives the currently selected node via a single atom (no Zustand/Jotai — one atom is enough).
+Each node receives its data object and finding state. Flagged nodes receive severity classes that drive border color, glow, and pulse animation. The inspector panel reads the selected node from the component state and renders the corresponding explanation and next action.
 
 ### Rules as data
 
-All six handoff break rules are pure functions in `src/lib/q2see/rules.ts`:
+All six handoff break rules are pure functions exported from `functions/q2see/analyze.js`, so they can run inside a Cloudflare Pages Function and in unit tests without a Workers runtime:
 
 ```typescript
 type RuleResult = { finding: Finding | null };
@@ -454,40 +458,28 @@ Rules are evaluated at build time and embedded in `findings.json`. The in-browse
 src/
   pages/
     q2see/
-      index.astro       # landing/marketing shell
-      app/
-        index.astro     # app shell + Preact island mount
+      index.astro       # page shell, import panel, graph mount
   components/
     q2see/
-      FlowGraph.tsx     # React Flow wrapper
-      NodeOpportunity.tsx
-      NodeQuote.tsx
-      NodeContract.tsx
-      NodeInvoice.tsx
-      NodeRenewal.tsx
-      InspectorPanel.tsx
-      FindingsRail.tsx
-      FilterBar.tsx
-      SyntheticBanner.tsx
-  lib/
-    q2see/
-      rules.ts          # six handoff-break rules (pure functions)
-      layout.ts         # dagre layout computation
-      types.ts          # shared TypeScript types
-  styles/
-    q2see/
-      tokens.css
-      graph.css
-      inspector.css
-data/
+      app.ts            # sample loading, import POST, SVG graph, inspector
+functions/
   q2see/
-    opportunities.json
-    quotes.json
-    contracts.json
-    invoices.json
-    renewals.json
-    findings.json
-    edges.json
+    analyze.js          # CSV/JSON parsing, six detection rules, edge building
+tests/
+  q2see-analyze.test.js # parser and rules tests
+public/
+  q2see/
+    sample-q2c-export.csv
+    data/
+      opportunities.json
+      quotes.json
+      contracts.json
+      invoices.json
+      renewals.json
+      findings.json
+      edges.json
+styles/
+  q2see.css
 ```
 
 ---
@@ -496,14 +488,15 @@ data/
 
 ### In
 
-- Static Astro site, client-side only, deploys to `demos.dallascrilley.com/q2see`
+- Static Astro site at `demos.dallascrilley.com/q2see`
+- Real Cloudflare Pages Function backend at `POST /q2see/analyze`
 - Five-node-type flow graph with zoom/pan/click navigation
-- Six planted handoff breaks, each producing a structured finding with verbatim inspector text
+- Six handoff-break rules, each producing structured findings on the sample or an uploaded export
 - Auto-center on most critical finding on load
 - Inspector panel: healthy + flagged node detail (verbatim text per §6)
 - Findings rail: all active anomalies, "jump to node" links
 - Filter bar: by severity, object type
-- Synthetic data banner (persistent, dismissible per session; with voiced copy — see §9)
+- Synthetic sample banner plus uploaded-data boundary state
 - Landing/marketing one-pager at `/q2see/` with problem framing, demo CTA, honest limits
 - Responsive layout (desktop primary; tablet functional; mobile read-only fallback)
 
@@ -511,9 +504,9 @@ data/
 
 - Real Salesforce CPQ / Ironclad / Stripe OAuth connections (architecture documented, not wired)
 - Editable records or "fix" actions that persist changes
-- Backend, database, API keys, or secrets of any kind
+- Database, API keys, or secrets of any kind
 - Multi-user / workspace / auth layer
-- CSV export (nice-to-have, deferred)
+- CSV export from the analyzed result (nice-to-have, deferred)
 - Animated Sankey view (expensive; the graph is sufficient)
 
 ---
@@ -530,7 +523,7 @@ The banner is the demo's honesty signal. It is persistent (not dismissible on th
 
 **Banner copy (landing page, below the hero):**
 
-> **A note on the data:** Q2See runs entirely in your browser on synthetic records. No live Salesforce, no live Stripe, no real customer data. The six handoff breaks are reproductions of real failure patterns — the kind of breaks that appear when CPQ, CLM, and billing run on separate triggers with no shared observable layer. The tool is a proof of concept, not a production product.
+> **A note on the data:** The default Q2See sample uses synthetic records. You can also upload a point-in-time Quote-to-Cash CSV or JSON export, which the backend parses and inspects server-side. There is no live Salesforce, Stripe, or Workato OAuth connection, no storage, and no remediation writeback. The six handoff breaks are reproductions of real failure patterns — the kind of breaks that appear when CPQ, CLM, and billing run on separate triggers with no shared observable layer. The tool is a proof of concept, not a production product.
 
 This framing is a senior tell. A candidate who plants specific, realistic breaks and explains what class of production bug each represents is demonstrating domain ownership — not hiding behind "synthetic data" as an apology.
 
