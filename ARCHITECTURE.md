@@ -83,7 +83,7 @@ Every node has a computed severity based on its findings and its downstream conn
 Clicking a node opens an inspector with the full object record and the specific finding. This two-level design (graph for overview, inspector for detail) scales to hundreds of records without cluttering the canvas.
 
 ### 3. Filter bar for triage
-Severity filters (healthy, warning, broken, at-risk) let the user focus on the problems. A revenue-ops lead can hide all green nodes and see only the broken handoffs in one click.
+Severity filters (healthy, warning, broken, at-risk) and object-type filters (contracts, invoices, renewals) both narrow the graph. A revenue-ops lead can hide all green nodes and see only the broken handoffs in one click, or isolate a single object type to audit one stage of the pipeline. Healthy bulk records are collapsed into a "+N healthy records" pill per column so the breaks stay legible.
 
 ## File map
 

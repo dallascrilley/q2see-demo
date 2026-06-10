@@ -95,6 +95,7 @@ let ds: DataSet | null = null;
 let nodes: LayoutNode[] = [];
 let activeNodeId: string | null = null;
 let activeFilters: Set<string> = new Set(); // severity filters
+let activeTypes: Set<string> = new Set(); // object-type filters (contract/invoice/renewal)
 let activeFindingId: string | null = null;
 
 // pan/zoom
@@ -319,13 +320,16 @@ function renderGraph() {
   // Clear
   while (g.firstChild) g.removeChild(g.firstChild);
 
-  // Compute visible SVG dimensions
+  // Map SVG user units 1:1 to screen pixels. All pan/zoom math (focusNode,
+  // centerOnNode, wheel zoom) computes translates in pixel terms, so the
+  // viewBox must match the element's pixel box. Previously it was set to the
+  // content size (~1070x488) while #q2-svg is height:100% with
+  // preserveAspectRatio="none", which stretched the graph ~2x vertically and
+  // crammed it to the bottom of the canvas (read as blank at tall viewports).
   const svgRect = svg.getBoundingClientRect();
-  const totalH = Math.max(...nodes.map(n => n.cy + n.h / 2)) + SVG_PAD_BOTTOM;
-  const totalW = Math.max(...Object.values(COL_X)) + NODE_W / 2 + SVG_PAD_RIGHT;
-  svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
-
-  void svgRect;
+  const vw = svgRect.width || 1040;
+  const vh = svgRect.height || 600;
+  svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
 
   // Defs: arrowheads
   const defs = svgEl('defs', {});
@@ -363,8 +367,10 @@ function renderGraph() {
   const filterWarning = activeFilters.has('warning');
   const filterRisk    = activeFilters.has('at-risk');
   const anyFilter     = filterBroken || filterWarning || filterRisk;
+  const anyTypeFilter = activeTypes.size > 0;
 
   function nodeVisible(node: LayoutNode): boolean {
+    if (anyTypeFilter && !activeTypes.has(node.type)) return false;
     if (!anyFilter) return true;
     if (filterBroken  && node.severity === 'broken')  return true;
     if (filterWarning && node.severity === 'warning')  return true;
@@ -868,14 +874,19 @@ function initFilterBar() {
       if (sev) {
         if (activeFilters.has(sev)) {
           activeFilters.delete(sev);
-          pill.classList.remove('active');
         } else {
           activeFilters.add(sev);
-          pill.classList.add('active');
         }
+        pill.classList.toggle('active', activeFilters.has(sev));
+        pill.setAttribute('aria-pressed', String(activeFilters.has(sev)));
       } else if (type) {
-        // Object type filter — for now just a visual toggle, TODO: filter nodes
-        pill.classList.toggle('active');
+        if (activeTypes.has(type)) {
+          activeTypes.delete(type);
+        } else {
+          activeTypes.add(type);
+        }
+        pill.classList.toggle('active', activeTypes.has(type));
+        pill.setAttribute('aria-pressed', String(activeTypes.has(type)));
       }
 
       renderGraph();
@@ -963,14 +974,24 @@ function initPanZoom() {
 
 // ─── Center on node ───────────────────────────────────────────────────────────
 
+const GRAPH_TOP_PAD = 28;
+
+// Vertical offset for the graph group. This is a short, wide diagram, so when it
+// fits inside the canvas we top-anchor it (avoids large empty ledger space above
+// and below on tall viewports); only when it overflows do we center on the node.
+function graphTop(rectHeight: number, nodeCy: number): number {
+  const contentH = (nodes.length ? Math.max(...nodes.map(n => n.cy + n.h / 2)) : 0) * vpScale;
+  if (contentH + GRAPH_TOP_PAD * 2 <= rectHeight) return GRAPH_TOP_PAD;
+  return rectHeight / 2 - nodeCy * vpScale;
+}
+
 function centerOnNode(node: LayoutNode) {
   const svg = document.getElementById('q2-svg');
   if (!svg) return;
   const rect = svg.getBoundingClientRect();
   const cx = rect.width / 2;
-  const cy = rect.height / 2;
   vpX = cx - node.cx * vpScale;
-  vpY = cy - node.cy * vpScale;
+  vpY = graphTop(rect.height, node.cy);
   applyTransform();
 }
 
@@ -1033,12 +1054,12 @@ function firstSevereNodeId(): string | null {
 function focusNode(id: string) {
   const node = nodes.find(n => n.id === id);
   if (!node || !ds) return;
-  vpScale = 0.75;
+  vpScale = 0.82;
   const svg = document.getElementById('q2-svg');
   if (svg) {
     const rect = svg.getBoundingClientRect();
     vpX = rect.width * 0.5 - node.cx * vpScale;
-    vpY = rect.height * 0.5 - node.cy * vpScale;
+    vpY = graphTop(rect.height, node.cy);
   }
   selectNode(id);
 }
