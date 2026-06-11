@@ -4,7 +4,7 @@
    Hairline rules · tabular figures · right-aligned money
    Committed light — no dark mode ever. */
 
-/* Fonts: loaded via <link> in src/pages/index.astro <head> for faster FCP (no render-blocking @import). */
+/* Fonts: loaded via <link> in q2see/index.astro <head> for faster FCP (no render-blocking @import). */
 
 /* ─── Design tokens ────────────────────────────────────────────────────── */
 :root {
@@ -923,8 +923,9 @@ body {
 @media (max-width: 600px) {
   .q2-nav { padding: 0 var(--q2-space-4); }
   .q2-nav-label { display: none; }
-  .q2-filter-bar { padding: 6px var(--q2-space-4); }
-  .q2-filter-pill { font-size: 10px; padding: 2px 8px; }
+  /* wrap, don't clip — every filter pill stays reachable at 390px */
+  .q2-filter-bar { padding: 6px var(--q2-space-4); flex-wrap: wrap; row-gap: 4px; }
+  .q2-filter-pill { font-size: 11px; padding: 6px 10px; min-height: 32px; }
   .q2-finding-card { min-width: 180px; }
   .q2-import-controls { flex-wrap: wrap; }
 }
