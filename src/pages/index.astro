@@ -3,6 +3,8 @@
 // Static page; synthetic data loaded client-side from /q2see/data/.
 // Real backend: import-capable, posts to /q2see/analyze (Cloudflare Pages Function).
 import '../styles/q2see.css';
+import GuidedTour from '../components/demo/GuidedTour.astro';
+import { GUIDED_TOURS } from '../data/guidedTours';
 const title = "Q2See — Signed contract. No invoice. Nobody's panicking yet. They will be.";
 const description = "One flow graph. Every broken handoff. Before legal finds it first. Q2See inspects your Quote-to-Cash pipeline at the record level — contract, quote, invoice, renewal — and surfaces exactly where the plumbing broke.";
 ---
@@ -69,6 +71,8 @@ const description = "One flow graph. Every broken handoff. Before legal finds it
         </p>
         <button class="q2-banner-dismiss" aria-label="Dismiss banner" id="q2-banner-dismiss">×</button>
       </div>
+
+      <GuidedTour {...GUIDED_TOURS.q2see} />
 
       <!-- Filter bar -->
       <div class="q2-filter-bar" role="toolbar" aria-label="Filter findings">
