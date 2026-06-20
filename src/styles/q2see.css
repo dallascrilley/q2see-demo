@@ -1021,6 +1021,11 @@ body {
   border-color: oklch(28% 0.05 255);
 }
 
+.q2-import-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .q2-import-link { color: var(--q2-text-muted); }
 
 .q2-import-text {

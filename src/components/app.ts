@@ -1075,7 +1075,13 @@ function setMode(label: string, isUploaded: boolean) {
 }
 
 async function runImport(raw: string, name: string) {
+  const panel = document.getElementById('q2-import-panel');
+  const analyzeBtn = document.getElementById('q2-import-analyze') as HTMLButtonElement | null;
+  const sampleBtn = document.getElementById('q2-import-sample') as HTMLButtonElement | null;
   const status = document.getElementById('q2-import-status');
+  if (panel) panel.setAttribute('aria-busy', 'true');
+  if (analyzeBtn) analyzeBtn.disabled = true;
+  if (sampleBtn) sampleBtn.disabled = true;
   if (status) { status.textContent = 'Analyzing…'; status.className = 'q2-import-status'; }
   try {
     const res = await fetch('/q2see/analyze', {
@@ -1113,6 +1119,10 @@ async function runImport(raw: string, name: string) {
       status.className = 'q2-import-status q2-import-status--err';
       status.textContent = err instanceof Error ? err.message : 'Import failed.';
     }
+  } finally {
+    if (panel) panel.removeAttribute('aria-busy');
+    if (analyzeBtn) analyzeBtn.disabled = false;
+    if (sampleBtn) sampleBtn.disabled = false;
   }
 }
 
