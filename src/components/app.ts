@@ -858,7 +858,11 @@ function renderFindingsRail() {
     };
     card.addEventListener('click', onClick);
     card.addEventListener('keydown', (e: Event) => {
-      if ((e as KeyboardEvent).key === 'Enter') onClick();
+      const ke = e as KeyboardEvent;
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
+        onClick();
+      }
     });
   });
 }

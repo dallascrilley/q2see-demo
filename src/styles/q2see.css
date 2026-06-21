@@ -804,6 +804,12 @@ body {
   background: var(--q2-surface-hover);
 }
 
+.q2-finding-card:focus-visible {
+  outline: 2px solid var(--q2-ink);
+  outline-offset: -2px;
+  background: var(--q2-surface-hover);
+}
+
 .q2-finding-card.active {
   background: oklch(72% 0.12 85 / 0.08);
   box-shadow: inset 2px 0 0 var(--q2-accent);
