@@ -119,13 +119,26 @@ test('analyze returns a structured hint when mapped records have no lifecycle li
 });
 
 test('analyze preserves valid findings when a canonical dataset has no lifecycle links', () => {
-  const out = analyze(JSON.stringify({
-    opportunities: [],
-    quotes: [],
-    contracts: [{ id: 'C-REVIEW', opportunity_id: 'O-REVIEW', quote_id: '', status: 'Executed', executed_at: '2026-05-01', arr_usd: 48000, entity: 'Review Co' }],
-    invoices: [],
-    renewals: [],
-  }), AS_OF);
+  const out = analyze(
+    JSON.stringify({
+      opportunities: [],
+      quotes: [],
+      contracts: [
+        {
+          id: 'C-REVIEW',
+          opportunity_id: 'O-REVIEW',
+          quote_id: '',
+          status: 'Executed',
+          executed_at: '2026-05-01',
+          arr_usd: 48000,
+          entity: 'Review Co',
+        },
+      ],
+      invoices: [],
+      renewals: [],
+    }),
+    AS_OF,
+  );
   assert.equal(out.findings[0].type, 'orphaned_contract');
   assert.equal(out.inputHint, undefined);
 });
