@@ -428,7 +428,7 @@ export function analyze(raw, asOf) {
     dataset.contracts.filter((contract) => contract.quote_id && quoteIds.has(contract.quote_id)).length +
     dataset.invoices.filter((invoice) => invoice.contract_id && contractIds.has(invoice.contract_id)).length +
     dataset.renewals.filter((renewal) => renewal.contract_id && contractIds.has(renewal.contract_id)).length;
-  const inputHint = linkedEntities === 0
+  const inputHint = linkedEntities === 0 && findings.length === 0
     ? {
       code: 'no-linked-entities',
       message: 'Records were parsed, but no quote-to-contract or contract-to-invoice links were found. For the orphaned-contract probe, include opportunity_id, quote_id, contract_id, contract_status, contract_executed_at, and leave invoice_id blank.',

@@ -118,6 +118,18 @@ test('analyze returns a structured hint when mapped records have no lifecycle li
   assert.equal(out.inputHint?.code, 'no-linked-entities');
 });
 
+test('analyze preserves valid findings when a canonical dataset has no lifecycle links', () => {
+  const out = analyze(JSON.stringify({
+    opportunities: [],
+    quotes: [],
+    contracts: [{ id: 'C-REVIEW', opportunity_id: 'O-REVIEW', quote_id: '', status: 'Executed', executed_at: '2026-05-01', arr_usd: 48000, entity: 'Review Co' }],
+    invoices: [],
+    renewals: [],
+  }), AS_OF);
+  assert.equal(out.findings[0].type, 'orphaned_contract');
+  assert.equal(out.inputHint, undefined);
+});
+
 test('analyze accepts a canonical JSON dataset too', () => {
   const csvOut = analyze(sampleCsv, AS_OF);
   const jsonOut = analyze(JSON.stringify({
