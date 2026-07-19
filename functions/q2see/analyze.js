@@ -420,6 +420,21 @@ export function analyze(raw, asOf) {
 
   const findings = detectFindings(dataset, asOf);
   const edges = buildEdges(dataset, findings);
+  const opportunityIds = new Set(dataset.opportunities.map((opportunity) => opportunity.id));
+  const quoteIds = new Set(dataset.quotes.map((quote) => quote.id));
+  const contractIds = new Set(dataset.contracts.map((contract) => contract.id));
+  const linkedEntities =
+    dataset.quotes.filter((quote) => opportunityIds.has(quote.opportunity_id)).length +
+    dataset.contracts.filter((contract) => contract.quote_id && quoteIds.has(contract.quote_id)).length +
+    dataset.invoices.filter((invoice) => invoice.contract_id && contractIds.has(invoice.contract_id)).length +
+    dataset.renewals.filter((renewal) => renewal.contract_id && contractIds.has(renewal.contract_id)).length;
+  const inputHint = linkedEntities === 0
+    ? {
+      code: 'no-linked-entities',
+      message: 'Records were parsed, but no quote-to-contract or contract-to-invoice links were found. For the orphaned-contract probe, include opportunity_id, quote_id, contract_id, contract_status, contract_executed_at, and leave invoice_id blank.',
+      requiredColumns: ['opportunity_id', 'quote_id', 'contract_id', 'contract_status', 'contract_executed_at', 'invoice_id'],
+    }
+    : undefined;
 
   // Strip internal scratch fields before returning to the client.
   const invoices = dataset.invoices.map(({ _due_at, _paid, ...rest }) => rest);
@@ -434,12 +449,14 @@ export function analyze(raw, asOf) {
     renewals: dataset.renewals,
     edges,
     findings,
+    ...(inputHint ? { inputHint } : {}),
     stats: {
       opportunities: dataset.opportunities.length,
       quotes: dataset.quotes.length,
       contracts: dataset.contracts.length,
       invoices: invoices.length,
       renewals: dataset.renewals.length,
+      linkedEntities,
       findings: findings.length,
       critical: findings.filter((f) => f.severity === 'critical').length,
     },

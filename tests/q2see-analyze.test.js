@@ -11,6 +11,10 @@ const sampleCsv = readFileSync(join(here, '../public/q2see/sample-q2c-export.csv
 
 // Anchor "today" so overdue / days-until math is deterministic across machines.
 const AS_OF = '2026-06-04';
+const probeCsv = [
+  'opportunity_id,account,stage,arr,quote_id,quote_status,quote_amount,quote_currency,contract_id,contract_status,contract_executed_at,term_start,term_end,invoice_id',
+  'OPP-PROBE,Ops Probe Co,Closed Won,48000,Q-PROBE,Accepted,48000,USD,C-PROBE,Executed,2026-05-01,2026-05-01,2027-05-01,',
+].join('\n');
 
 test('parseCsv handles quoted fields with embedded commas', () => {
   const rows = parseCsv('a,b\n"Orion Payments, Inc.",10\n');
@@ -100,6 +104,18 @@ test('analyze accepts raw CSV and returns a client-ready dataset', () => {
   // internal scratch fields must not leak to the client
   assert.equal('_due_at' in out.invoices[0], false);
   assert.equal('_paid' in out.invoices[0], false);
+});
+
+test('documented one-row probe CSV produces the orphaned-contract finding', () => {
+  const out = analyze(probeCsv, AS_OF);
+  assert.equal(out.stats.findings, 1);
+  assert.equal(out.findings[0].type, 'orphaned_contract');
+});
+
+test('analyze returns a structured hint when mapped records have no lifecycle links', () => {
+  const out = analyze('contract_id,stage,amount,invoice_id\nC-PROBE,Closed Won,48000,\n', AS_OF);
+  assert.equal(out.stats.findings, 0);
+  assert.equal(out.inputHint?.code, 'no-linked-entities');
 });
 
 test('analyze accepts a canonical JSON dataset too', () => {
