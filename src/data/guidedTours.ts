@@ -8,12 +8,12 @@ export const GUIDED_TOURS = {
         body: 'Upload or paste a quote-to-cash CSV/JSON export; the sample shows opportunities, quotes, contracts, invoices, and renewals in one flow.',
       },
       {
-        label: 'Run the backend parser',
-        body: 'Analyze export posts the file to the Cloudflare backend, normalizes lifecycle columns, and flags broken handoffs server-side.',
+        label: 'Run the check',
+        body: 'Click Analyze. The server reads your file and flags where the handoff broke — no setup, nothing stored.',
       },
       {
         label: 'Read the break',
-        body: 'The graph and inspector show the exact stuck record, severity, source fields, and why revenue is leaking before the renewal path reaches finance.',
+        body: 'Click a red node or a finding card to see what broke, who owns it, and the fix.',
       },
     ],
   },

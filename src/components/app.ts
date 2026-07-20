@@ -1102,9 +1102,9 @@ async function runImport(raw: string, name: string) {
       const icon = banner.querySelector('.q2-banner-icon');
       const text = banner.querySelector('.q2-banner-text');
       if (icon) icon.textContent = 'LIVE';
-      if (text) text.innerHTML = `<strong>Your data — ${data.stats.opportunities} deals analyzed server-side.</strong> ` +
-        `These findings were computed from the export you uploaded (${name}), not synthetic data. ` +
-        `Nothing is stored, and this is a point-in-time export — not a live CRM connection.`;
+      if (text) text.innerHTML = `<strong>Your data — ${data.stats.opportunities} deals checked from the file you uploaded.</strong> ` +
+        `These findings came from ${name}, not demo data. ` +
+        `Nothing is stored. This is a one-time export check — not a live CRM connection.`;
     }
     document.getElementById('q2-import-panel')?.classList.add('hidden');
     document.getElementById('q2-import-toggle')?.setAttribute('aria-expanded', 'false');

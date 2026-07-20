@@ -42,9 +42,9 @@ const description = 'Import a quote-to-cash export and trace where the handoff b
       <div class="q2-import-panel hidden" id="q2-import-panel" role="region" aria-label="Import a Quote-to-Cash export">
         <div class="q2-import-head">
           <strong>Inspect your own pipeline.</strong>
-          Upload a CSV export of your deals (one row per opportunity, lifecycle columns inline) and the server parses
-          contract → quote → invoice → renewal and flags every broken handoff in <em>your</em> rows.
-          Analysis runs server-side on the export you provide — no live CRM connection, no data stored.
+          Upload a CSV of your deals (one row per deal, with quote / contract / invoice / renewal columns).
+          The server maps contract → quote → invoice → renewal and flags every broken handoff in <em>your</em> rows.
+          Nothing is stored, and there is no live CRM connection — just the file you provide.
         </div>
         <div class="q2-import-controls">
           <label class="q2-import-filebtn">
@@ -55,7 +55,7 @@ const description = 'Import a quote-to-cash export and trace where the handoff b
           <a class="q2-import-link" href="/q2see/sample-q2c-export.csv" download>Download sample CSV</a>
         </div>
         <textarea id="q2-import-text" class="q2-import-text" rows="5" spellcheck="false"
-          placeholder="…or paste CSV / JSON here. Header row + one row per opportunity. Synonym-tolerant columns: opportunity_id, account, arr, quote_id, quote_status, quote_amount, quote_currency, contract_id, contract_status, contract_executed_at, term_start, term_end, invoice_id, invoice_status, invoice_amount, invoice_currency, invoice_due_at, invoice_paid_at, renewal_id, renewal_date, renewal_owner, renewal_status"></textarea>
+          placeholder="Or paste CSV or JSON here — header row, one row per deal."></textarea>
         <div class="q2-import-actions">
           <button class="q2-import-btn q2-import-btn--primary" id="q2-import-analyze" type="button">Analyze export</button>
           <span class="q2-import-status" id="q2-import-status" role="status"></span>
@@ -64,10 +64,10 @@ const description = 'Import a quote-to-cash export and trace where the handoff b
 
       <!-- Synthetic data banner -->
       <div class="q2-banner" id="q2-banner" role="status">
-        <span class="q2-banner-icon">SYN</span>
+        <span class="q2-banner-icon">DEMO</span>
         <p class="q2-banner-text">
-          <strong>Synthetic data — these breaks are real, these accounts aren't.</strong>
-          Every finding in this demo was planted from a pattern that actually appears in production Q2C systems. The account names are fictional. The failure modes are not. This is a fixed point-in-time export — the day counts (e.g. “77 days unbilled”) are measured as of the May 30, 2026 snapshot, not today.
+          <strong>Demo data — the breaks are real, the account names aren't.</strong>
+          Every finding here was planted from a pattern that shows up in real quote-to-cash systems. The company names are fictional; the failure modes are not. Day counts (for example, “77 days unbilled”) are measured from a fixed May 30, 2026 snapshot, not today.
         </p>
         <button class="q2-banner-dismiss" aria-label="Dismiss banner" id="q2-banner-dismiss">×</button>
       </div>
@@ -81,7 +81,7 @@ const description = 'Import a quote-to-cash export and trace where the handoff b
         <button class="q2-filter-pill" data-severity="warning" aria-pressed="false">Warning</button>
         <button class="q2-filter-pill" data-severity="at-risk" aria-pressed="false">At Risk</button>
         <div class="q2-filter-divider" aria-hidden="true"></div>
-        <span class="q2-filter-label">Object</span>
+        <span class="q2-filter-label">Stage</span>
         <button class="q2-filter-pill" data-type="contract" aria-pressed="false">Contracts</button>
         <button class="q2-filter-pill" data-type="invoice" aria-pressed="false">Invoices</button>
         <button class="q2-filter-pill" data-type="renewal" aria-pressed="false">Renewals</button>
@@ -93,7 +93,7 @@ const description = 'Import a quote-to-cash export and trace where the handoff b
         <!-- Graph canvas -->
         <div class="q2-graph-wrap" id="q2-graph-wrap" role="main" aria-label="Quote-to-Cash flow graph">
           <div class="q2-graph-canvas-wrap">
-            <svg id="q2-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Q2C flow graph — 5 columns: Opportunity, Quote, Contract, Invoice, Renewal" preserveAspectRatio="none">
+            <svg id="q2-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Quote-to-cash flow graph — five stages: Opportunity, Quote, Contract, Invoice, Renewal" preserveAspectRatio="none">
               <g id="q2-graph-g"></g>
             </svg>
           </div>
