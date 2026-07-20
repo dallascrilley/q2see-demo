@@ -1067,7 +1067,7 @@ function focusNode(id: string) {
 // ─── Import (real backend) ──────────────────────────────────────────────────────
 
 function setMode(label: string, isUploaded: boolean) {
-  const badge = document.querySelector('.q2-nav-badge');
+  const badge = document.getElementById('q2-nav-mode-badge');
   if (badge) {
     badge.textContent = label;
     badge.classList.toggle('q2-nav-badge--live', isUploaded);
@@ -1107,6 +1107,7 @@ async function runImport(raw: string, name: string) {
         `Nothing is stored, and this is a point-in-time export — not a live CRM connection.`;
     }
     document.getElementById('q2-import-panel')?.classList.add('hidden');
+    document.getElementById('q2-import-toggle')?.setAttribute('aria-expanded', 'false');
   } catch (err) {
     console.error('[Q2See] Import failed:', err);
     if (status) {
@@ -1124,7 +1125,10 @@ function initImport() {
   const analyzeBtn = document.getElementById('q2-import-analyze');
   const sampleBtn = document.getElementById('q2-import-sample');
 
-  toggle?.addEventListener('click', () => panel?.classList.toggle('hidden'));
+  toggle?.addEventListener('click', () => {
+    const opening = panel?.classList.toggle('hidden') === false;
+    toggle.setAttribute('aria-expanded', String(opening));
+  });
 
   fileInput?.addEventListener('change', () => {
     const file = fileInput.files?.[0];
@@ -1136,7 +1140,7 @@ function initImport() {
 
   analyzeBtn?.addEventListener('click', () => {
     const raw = textarea?.value?.trim();
-    if (!raw) { const s = document.getElementById('q2-import-status'); if (s) { s.className = 'q2-import-status q2-import-status--err'; s.textContent = 'Paste CSV/JSON or choose a file first.'; } return; }
+    if (!raw) { const s = document.getElementById('q2-import-status'); if (s) { s.className = 'q2-import-status q2-import-status--err'; s.textContent = 'Add a CSV or JSON export first — choose a file or paste rows below.'; } return; }
     runImport(raw, 'pasted-export.csv');
   });
 
