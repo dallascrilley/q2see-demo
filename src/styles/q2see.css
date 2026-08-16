@@ -1055,6 +1055,7 @@ body {
   color: var(--q2-text-muted);
 }
 .q2-import-status--ok  { color: var(--q2-accent-dim); }
+.q2-import-status--warn { color: oklch(58% 0.13 82); }
 .q2-import-status--err { color: var(--q2-node-broken); }
 
 /* Live data banner state */

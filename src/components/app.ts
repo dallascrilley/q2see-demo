@@ -1085,6 +1085,13 @@ async function runImport(raw: string, name: string) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || `Server returned ${res.status}`);
+    if (data.inputHint) {
+      if (status) {
+        status.className = 'q2-import-status q2-import-status--warn';
+        status.textContent = `${data.inputHint.message} (${data.stats.opportunities} deals mapped; ${data.stats.linkedEntities} links.)`;
+      }
+      return;
+    }
     ds = {
       opportunities: data.opportunities, quotes: data.quotes, contracts: data.contracts,
       invoices: data.invoices, renewals: data.renewals, edges: data.edges, findings: data.findings,

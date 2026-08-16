@@ -39,6 +39,17 @@ curl -X POST https://demos.dallascrilley.com/q2see/analyze \
 
 The parsing and detection logic are pure functions, exported and unit-tested in [`tests/q2see-analyze.test.js`](tests/q2see-analyze.test.js).
 
+### Reproduce the orphaned-contract finding
+
+The analyzer expects one flattened lifecycle row per opportunity. This exact CSV is also the live `/ops` probe; paste it into **Import your data** or post it to `/q2see/analyze` to get one critical `orphaned_contract` finding. Keep the final `invoice_id` value empty — that is the missing downstream handoff being tested.
+
+```csv
+opportunity_id,account,stage,arr,quote_id,quote_status,quote_amount,quote_currency,contract_id,contract_status,contract_executed_at,term_start,term_end,invoice_id
+OPP-PROBE,Ops Probe Co,Closed Won,48000,Q-PROBE,Accepted,48000,USD,C-PROBE,Executed,2026-05-01,2026-05-01,2027-05-01,
+```
+
+If an upload maps records but produces no lifecycle links, the response includes an `inputHint` with the required relationship columns instead of silently implying a healthy pipeline.
+
 ## Run locally
 
 ```bash
