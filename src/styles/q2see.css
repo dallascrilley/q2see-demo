@@ -804,6 +804,12 @@ body {
   background: var(--q2-surface-hover);
 }
 
+.q2-finding-card:focus-visible {
+  outline: 2px solid var(--q2-ink);
+  outline-offset: -2px;
+  background: var(--q2-surface-hover);
+}
+
 .q2-finding-card.active {
   background: oklch(72% 0.12 85 / 0.08);
   box-shadow: inset 2px 0 0 var(--q2-accent);
@@ -1019,6 +1025,11 @@ body {
 .q2-import-btn--primary:hover {
   background: oklch(28% 0.05 255);
   border-color: oklch(28% 0.05 255);
+}
+
+.q2-import-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .q2-import-link { color: var(--q2-text-muted); }

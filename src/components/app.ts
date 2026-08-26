@@ -858,7 +858,11 @@ function renderFindingsRail() {
     };
     card.addEventListener('click', onClick);
     card.addEventListener('keydown', (e: Event) => {
-      if ((e as KeyboardEvent).key === 'Enter') onClick();
+      const ke = e as KeyboardEvent;
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
+        onClick();
+      }
     });
   });
 }
@@ -1074,8 +1078,26 @@ function setMode(label: string, isUploaded: boolean) {
   }
 }
 
+function setImportBusy(isBusy: boolean) {
+  const panel = document.getElementById('q2-import-panel');
+  const analyzeBtn = document.getElementById('q2-import-analyze') as HTMLButtonElement | null;
+  const sampleBtn = document.getElementById('q2-import-sample') as HTMLButtonElement | null;
+  const fileInput = document.getElementById('q2-import-file') as HTMLInputElement | null;
+  const textarea = document.getElementById('q2-import-text') as HTMLTextAreaElement | null;
+
+  panel?.setAttribute('aria-busy', String(isBusy));
+  if (analyzeBtn) {
+    analyzeBtn.disabled = isBusy;
+    analyzeBtn.textContent = isBusy ? 'Analyzing…' : 'Analyze export';
+  }
+  if (sampleBtn) sampleBtn.disabled = isBusy;
+  if (fileInput) fileInput.disabled = isBusy;
+  if (textarea) textarea.disabled = isBusy;
+}
+
 async function runImport(raw: string, name: string) {
   const status = document.getElementById('q2-import-status');
+  setImportBusy(true);
   if (status) { status.textContent = 'Analyzing…'; status.className = 'q2-import-status'; }
   try {
     const res = await fetch('/q2see/analyze', {
@@ -1114,6 +1136,8 @@ async function runImport(raw: string, name: string) {
       status.className = 'q2-import-status q2-import-status--err';
       status.textContent = err instanceof Error ? err.message : 'Import failed.';
     }
+  } finally {
+    setImportBusy(false);
   }
 }
 
